@@ -1,0 +1,19 @@
+# PHP project
+/vendor/
+/uploads/
+/.env
+/.env.local
+/.env.*.local
+/.idea/
+.vscode/
+.DS_Store
+error_log
+*.log
+composer.lock
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Node
+node_modules/
