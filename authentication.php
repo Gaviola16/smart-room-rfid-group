@@ -137,9 +137,30 @@ $flash       = getFlash();
     .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
     .sidebar-overlay.show { display: block; }
   }
+
+  /* Admin-only: simpler, flatter, more consistent look (visual only) */
+  body.role-admin .card {
+    box-shadow: none;
+    border: 1px solid #e3e6ea;
+    border-radius: 6px;
+  }
+  body.role-admin .card-header { border-radius: 5px 5px 0 0 !important; }
+  body.role-admin .stat-card { border-radius: 6px; }
+  /* Drop the oversized colored icon "chips" on stat cards — keep the icon's
+     color as the only status cue instead of a colored box behind it. */
+  body.role-admin .stat-card .stat-icon {
+    background: transparent !important;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    font-size: 1.05rem;
+  }
+  body.role-admin .btn { border-radius: 6px; }
+  body.role-admin .badge { border-radius: 4px; font-weight: 600; }
+  body.role-admin .rounded-pill { border-radius: 4px !important; }
 </style>
 </head>
-<body>
+<body class="<?= $role === 'admin' ? 'role-admin' : '' ?>">
 
 
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
@@ -237,15 +258,9 @@ $flash       = getFlash();
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link <?= ($currentFile === 'activity_reports.php') ? 'active' : '' ?>"
+      <a class="nav-link <?= (in_array($currentFile, ['activity_reports.php', 'responses.php'], true)) ? 'active' : '' ?>"
          href="/admin/activity_reports.php">
         <i class="bi bi-journal-richtext"></i> Activity &amp; Reports
-      </a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link <?= ($currentFile === 'responses.php') ? 'active' : '' ?>"
-         href="/admin/responses.php">
-        <i class="bi bi-chat-square-check"></i> Faculty Responses
       </a>
     </li>
   </ul>
@@ -291,11 +306,11 @@ $flash       = getFlash();
       <span class="topbar-title"><?= $pageTitle ?? 'Dashboard' ?></span>
     </div>
     <div class="d-flex align-items-center gap-2">
-      <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-        <i class="bi bi-circle-fill me-1" style="font-size:0.4rem;vertical-align:middle;"></i>
-        <?= ucfirst($role) ?>
-      </span>
-      <span class="text-muted small d-none d-md-inline"><?= date('D, M d Y') ?></span>
+      <?php if ($role === 'admin'): ?>
+      <!-- Admin identity/profile access already lives in the sidebar; header kept minimal per review. -->
+      <?php else: ?>
+      <!-- Faculty identity/profile access already lives in the sidebar; header kept minimal per review. -->
+      <?php endif; ?>
     </div>
   </div>
 

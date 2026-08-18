@@ -52,19 +52,20 @@ include __DIR__ . '/../authentication.php';
 ?>
 
 <style>
-.avail-card { border-radius: 14px; transition: transform .15s, box-shadow .15s; cursor: default; }
-.avail-card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(0,0,0,0.12); }
-.avail-card .room-code { font-size: 1.1rem; font-weight: 800; letter-spacing: .5px; }
+/* Scoped to this page only — flat, restrained style: no colored side
+   strips, no shadows, color used only on the status pill itself. */
+.avail-card { border: 1px solid #dfe3e8; border-radius: 6px; box-shadow: none; }
+.avail-card .room-code { font-size: 1.05rem; font-weight: 700; color: #2b2f33; }
 .avail-card .room-name { font-size: .8rem; color: #6c757d; }
 .avail-card .meta-row  { font-size: .75rem; color: #6c757d; }
 .status-pill {
-  font-size: .72rem; font-weight: 700; padding: .35rem .75rem;
-  border-radius: 50px; display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .72rem; font-weight: 600; padding: .25rem .55rem;
+  border-radius: 4px; display: inline-flex; align-items: center;
 }
-.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .filter-chip {
-  cursor: pointer; user-select: none; transition: all .15s;
-  border: 1px solid #dee2e6; border-radius: 50px; padding: .4rem 1rem; font-size: .82rem; font-weight: 600;
+  cursor: pointer; user-select: none; transition: background-color .15s;
+  border: 1px solid #dee2e6; border-radius: 4px; padding: .35rem .85rem; font-size: .82rem; font-weight: 600;
+  color: #495057;
 }
 .filter-chip.active { color: #fff; border-color: transparent; }
 .filter-chip[data-status="all"].active        { background:#495057; }
@@ -73,22 +74,12 @@ include __DIR__ . '/../authentication.php';
 .filter-chip[data-status="Reserved"].active     { background:#ffc107; color:#212529; }
 .filter-chip[data-status="Occupied"].active     { background:#dc3545; }
 .filter-chip[data-status="Unconfirmed"].active  { background:#6c757d; }
-#liveBadge { transition: opacity .3s; }
-@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
-.pulse { animation: pulse 1.6s infinite; }
 </style>
 
-<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div>
-    <h5 class="fw-bold mb-1"><i class="bi bi-broadcast text-danger me-2"></i>Room Availability Board</h5>
-    <div class="text-muted small">
-      Real-time monitoring for the Dean's Office &nbsp;|&nbsp;
-      <span class="pulse"><i class="bi bi-circle-fill text-success" style="font-size:.55rem;"></i></span>
-      Live &nbsp;|&nbsp; Last refreshed: <span id="liveBadge"><?= date('h:i:s A') ?></span>
-    </div>
-  </div>
-  <div class="d-flex gap-2">
-    <span class="badge bg-light text-dark border"><i class="bi bi-arrow-repeat me-1"></i>Auto-refresh: 5s</span>
+    <h5 class="fw-bold mb-1">Room Availability Board</h5>
+    <div class="text-muted small">Last refreshed: <span id="liveBadge"><?= date('h:i:s A') ?></span> &middot; auto-refreshes every 5s</div>
   </div>
 </div>
 
@@ -108,7 +99,7 @@ include __DIR__ . '/../authentication.php';
     <div class="card text-center h-100">
       <div class="card-body py-2">
         <div class="fw-bold text-<?= $color ?> fs-5" data-count-status="<?= htmlspecialchars($statusVal) ?>"><?= $count ?></div>
-        <div class="text-muted" style="font-size:.72rem;"><i class="bi <?= $icon ?> me-1"></i><?= $label ?></div>
+        <div class="text-muted" style="font-size:.72rem;"><?= $label ?></div>
       </div>
     </div>
   </div>
@@ -158,64 +149,56 @@ foreach ($roomList as $room):
 <div class="col-12 col-sm-6 col-lg-4 col-xl-3 room-item"
      data-status="<?= htmlspecialchars($room['status']) ?>"
      data-search="<?= htmlspecialchars($searchBlob) ?>">
-  <div class="card avail-card h-100 border-<?= $color ?> border-2">
+  <div class="card avail-card h-100">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div>
-          <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="room-code text-<?= $color ?> text-decoration-none"><?= htmlspecialchars($room['room_code']) ?></a>
+          <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="room-code text-decoration-none"><?= htmlspecialchars($room['room_code']) ?></a>
           <div class="room-name"><?= htmlspecialchars($room['room_name']) ?></div>
         </div>
         <span class="status-pill bg-<?= $color ?>-subtle text-<?= $color ?> border border-<?= $color ?>-subtle">
-          <span class="status-dot bg-<?= $color ?>"></span><?= htmlspecialchars($room['status']) ?>
+          <?= htmlspecialchars($room['status']) ?>
         </span>
       </div>
 
       <div class="meta-row mb-2">
-        <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($room['building'] ?? 'N/A') ?>
+        <?= htmlspecialchars($room['building'] ?? 'N/A') ?>
         <?php if ($room['floor']): ?> · <?= htmlspecialchars($room['floor']) ?><?php endif; ?>
-        &nbsp;|&nbsp;
-        <i class="bi bi-people me-1"></i><?= $room['capacity'] ?> seats
+        &nbsp;|&nbsp; <?= $room['capacity'] ?> seats
       </div>
 
       <hr class="my-2">
 
       <?php if ($room['faculty_name']): ?>
       <div class="mb-1">
-        <i class="bi bi-person-badge text-muted me-1"></i>
         <span class="fw-semibold small"><?= htmlspecialchars(facultyDisplayName($room['faculty_title'] ?? null, $room['faculty_name'])) ?></span>
       </div>
       <?php if ($room['subject']): ?>
       <div class="small text-muted mb-1">
-        <i class="bi bi-journal-text me-1"></i><?= htmlspecialchars($room['subject']) ?>
+        <?= htmlspecialchars($room['subject']) ?>
         <?= $room['section'] ? '('.htmlspecialchars($room['section']).')' : '' ?>
       </div>
       <?php endif; ?>
       <?php if ($room['time_start']): ?>
       <div class="small text-muted mb-1">
-        <i class="bi bi-clock me-1"></i>
         <?= date('h:i A', strtotime($room['time_start'])) ?> – <?= date('h:i A', strtotime($room['time_end'])) ?>
       </div>
       <?php endif; ?>
       <?php else: ?>
-      <div class="small text-muted mb-1"><i class="bi bi-dash-circle me-1"></i>No faculty assigned</div>
+      <div class="small text-muted mb-1">No faculty assigned</div>
       <?php endif; ?>
 
       <div class="small text-muted mt-2 pt-2 border-top">
-        <i class="bi bi-arrow-repeat me-1"></i>Last update:
-        <?= $room['updated_at'] ? date('h:i A', strtotime($room['updated_at'])) : '—' ?>
+        Last update: <?= $room['updated_at'] ? date('h:i A', strtotime($room['updated_at'])) : '—' ?>
       </div>
 
       <div class="d-flex gap-2 mt-2">
-        <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="btn btn-sm btn-outline-secondary flex-fill">
-          <i class="bi bi-clock-history me-1"></i>Timeline
-        </a>
+        <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="btn btn-sm btn-outline-secondary flex-fill">Timeline</a>
       <?php if ($room['status'] !== 'Available'): ?>
       <form method="POST" action="release_room.php" class="flex-fill">
         <input type="hidden" name="room_id" value="<?= $room['id'] ?>">
         <button class="btn btn-sm btn-outline-<?= $color ?> w-100"
-                onclick="return confirm('Release <?= htmlspecialchars($room['room_code']) ?> to Available?')">
-          <i class="bi bi-unlock me-1"></i>Release Room
-        </button>
+                onclick="return confirm('Release <?= htmlspecialchars($room['room_code']) ?> to Available?')">Release Room</button>
       </form>
       <?php endif; ?>
       </div>
