@@ -61,51 +61,46 @@ foreach ($rooms as $room):
 <div class="col-12 col-sm-6 col-lg-4 col-xl-3 room-item"
      data-status="<?= htmlspecialchars($room['status']) ?>"
      data-search="<?= htmlspecialchars($searchBlob) ?>">
-  <div class="card avail-card h-100 border-<?= $color ?> border-2">
+  <div class="card avail-card h-100">
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-start mb-2">
         <div>
-          <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="room-code text-<?= $color ?> text-decoration-none">
+          <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="room-code text-decoration-none">
             <?= htmlspecialchars($room['room_code']) ?>
           </a>
           <div class="room-name"><?= htmlspecialchars($room['room_name']) ?></div>
         </div>
         <span class="status-pill bg-<?= $color ?>-subtle text-<?= $color ?> border border-<?= $color ?>-subtle">
-          <span class="status-dot bg-<?= $color ?>"></span><?= htmlspecialchars($room['status']) ?>
+          <?= htmlspecialchars($room['status']) ?>
         </span>
       </div>
       <div class="meta-row mb-2">
-        <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($room['building'] ?? 'N/A') ?>
+        <?= htmlspecialchars($room['building'] ?? 'N/A') ?>
         <?php if ($room['floor']): ?> &middot; <?= htmlspecialchars($room['floor']) ?><?php endif; ?>
-        &nbsp;|&nbsp;<i class="bi bi-people me-1"></i><?= (int)$room['capacity'] ?> seats
+        &nbsp;|&nbsp;<?= (int)$room['capacity'] ?> seats
       </div>
       <hr class="my-2">
       <?php if ($room['faculty_name']): ?>
-      <div class="mb-1"><i class="bi bi-person-badge text-muted me-1"></i><span class="fw-semibold small"><?= htmlspecialchars(facultyDisplayName($room['faculty_title'] ?? null, $room['faculty_name'])) ?></span></div>
+      <div class="mb-1"><span class="fw-semibold small"><?= htmlspecialchars(facultyDisplayName($room['faculty_title'] ?? null, $room['faculty_name'])) ?></span></div>
       <?php if ($room['subject']): ?>
-      <div class="small text-muted mb-1"><i class="bi bi-journal-text me-1"></i><?= htmlspecialchars($room['subject']) ?><?= $room['section'] ? '('.htmlspecialchars($room['section']).')' : '' ?></div>
+      <div class="small text-muted mb-1"><?= htmlspecialchars($room['subject']) ?><?= $room['section'] ? '('.htmlspecialchars($room['section']).')' : '' ?></div>
       <?php endif; ?>
       <?php if ($room['time_start']): ?>
-      <div class="small text-muted mb-1"><i class="bi bi-clock me-1"></i><?= date('h:i A', strtotime($room['time_start'])) ?> - <?= date('h:i A', strtotime($room['time_end'])) ?></div>
+      <div class="small text-muted mb-1"><?= date('h:i A', strtotime($room['time_start'])) ?> - <?= date('h:i A', strtotime($room['time_end'])) ?></div>
       <?php endif; ?>
       <?php else: ?>
-      <div class="small text-muted mb-1"><i class="bi bi-dash-circle me-1"></i>No faculty assigned</div>
+      <div class="small text-muted mb-1">No faculty assigned</div>
       <?php endif; ?>
       <div class="small text-muted mt-2 pt-2 border-top">
-        <i class="bi bi-arrow-repeat me-1"></i>Last update:
-        <?= $room['updated_at'] ? date('h:i A', strtotime($room['updated_at'])) : date('h:i A') ?>
+        Last update: <?= $room['updated_at'] ? date('h:i A', strtotime($room['updated_at'])) : date('h:i A') ?>
       </div>
       <div class="d-flex gap-2 mt-2">
-        <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="btn btn-sm btn-outline-secondary flex-fill">
-          <i class="bi bi-clock-history me-1"></i>Timeline
-        </a>
+        <a href="room_timeline.php?id=<?= (int)$room['id'] ?>" class="btn btn-sm btn-outline-secondary flex-fill">Timeline</a>
         <?php if ($room['status'] !== 'Available'): ?>
         <form method="POST" action="release_room.php" class="flex-fill">
           <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
           <button class="btn btn-sm btn-outline-<?= $color ?> w-100"
-                  onclick="return confirm('Release <?= htmlspecialchars($room['room_code']) ?> to Available?')">
-            <i class="bi bi-unlock me-1"></i>Release
-          </button>
+                  onclick="return confirm('Release <?= htmlspecialchars($room['room_code']) ?> to Available?')">Release</button>
         </form>
         <?php endif; ?>
       </div>

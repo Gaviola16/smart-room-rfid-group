@@ -80,6 +80,35 @@ $feed  = $conn->query("
 include __DIR__ . '/../authentication.php';
 ?>
 
+<style>
+/* Scoped to this page only — does not affect shared layout or other pages */
+.dashboard-page .card {
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  border-radius: 8px;
+  border: 1px solid #e3e6ea;
+}
+.dashboard-page .card-header {
+  border-radius: 7px 7px 0 0 !important;
+}
+.dashboard-page .stat-card {
+  border-radius: 8px;
+  padding: 1.1rem;
+}
+.dashboard-page .stat-card .stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 7px;
+  font-size: 1.05rem;
+}
+.dashboard-page .stat-card .stat-value {
+  font-size: 1.5rem;
+}
+.dashboard-page .room-tile {
+  border-radius: 6px;
+}
+</style>
+
+<div class="dashboard-page">
 
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-3">
@@ -135,12 +164,12 @@ include __DIR__ . '/../authentication.php';
 <div class="row g-3 mb-4">
   <?php
   $extraCards = [
-    ['Pending Face Verification', 'warning', 'bi-person-bounding-box', $pendingFace],
-    ['Missed Confirmations', 'dark', 'bi-exclamation-triangle', $missedConfirmations],
+    ['Pending Face Verification', 'secondary', 'bi-person-bounding-box', $pendingFace],
+    ['Missed Confirmations', 'danger', 'bi-exclamation-triangle', $missedConfirmations],
     ['No Shows Today', 'danger', 'bi-person-fill-x', $noShowsToday],
     ['Unconfirmed Rooms', 'secondary', 'bi-question-circle', $unconfirmedRooms],
-    ['Faculty Checked In', 'info', 'bi-person-check', $facultyCheckedIn],
-    ['Faculty Not Yet Checked In', 'warning', 'bi-person-dash', $facultyNotYetCheckedIn],
+    ['Faculty Checked In', 'primary', 'bi-person-check', $facultyCheckedIn],
+    ['Faculty Not Yet Checked In', 'secondary', 'bi-person-dash', $facultyNotYetCheckedIn],
   ];
   foreach ($extraCards as [$label, $color, $icon, $value]):
   ?>
@@ -183,7 +212,7 @@ include __DIR__ . '/../authentication.php';
             $bg = $bgMap[$room['status']] ?? 'secondary';
           ?>
           <div class="col-6 col-md-4">
-            <div class="card border-0 bg-<?= $bg ?>-subtle border border-<?= $bg ?>-subtle h-100">
+            <div class="card room-tile border-0 bg-<?= $bg ?>-subtle border border-<?= $bg ?>-subtle h-100">
               <div class="card-body p-2 text-center">
                 <div class="fw-bold text-<?= $bg ?>" style="font-size:.95rem;"><?= htmlspecialchars($room['room_code']) ?></div>
                 <div class="small text-muted" style="font-size:.72rem;"><?= htmlspecialchars($room['room_name']) ?></div>
@@ -256,6 +285,8 @@ include __DIR__ . '/../authentication.php';
       </div>
     </div>
   </div>
+</div>
+
 </div>
 
   </div>

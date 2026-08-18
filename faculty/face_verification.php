@@ -265,20 +265,35 @@ function setStatus(msg, type = 'info', spin = true) {
 }
 
 /* ── Model loading with sessionStorage caching ───────────────────────────── */
-const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+// IMPORTANT: this MODEL_URL must host weights built for the exact face-api.js
+// build loaded above (dist/face-api.min.js@0.22.2 from justadudewhohacks).
+// It previously pointed at '@vladmandic/face-api/model' — a different,
+// actively-maintained fork with its own newer TensorFlow.js internals and
+// incompatible weight tensors. Loading justadudewhohacks' 0.22.2 script
+// against vladmandic's model files throws inside face-api.js's weight
+// loader (e.g. "expected weightMap[...] to be a Tensor4D, instead have
+// undefined"), which was silently caught below, leaving faceApiReady false
+// forever — the camera preview and MediaPipe bounding-box guide kept working
+// (separate library), but no descriptor could ever be generated, so every
+// capture ended in "Face recognition data could not be generated."
+// This URL serves the original weights from the SAME repo as the loaded
+// script, so the manifest/tensor format actually matches.
+const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
 
 async function loadFaceApiModels() {
-  try {
-    await Promise.all([
-      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
-    ]);
-    faceApiReady = true;
-    console.log('face-api.js models loaded');
-  } catch (e) {
-    console.warn('face-api.js models could not load:', e);
-  }
+  // Do NOT swallow the error here — the caller's .then()/.catch() below
+  // needs a real rejection to tell the person the model failed to load,
+  // instead of silently showing "Camera ready" while faceApiReady stays
+  // false forever (this was the second half of the underlying bug: even a
+  // genuine load failure was invisible to whoever was using the page —
+  // console.warn() alone is not "handling" the error).
+  await Promise.all([
+    faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+    faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+    faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+  ]);
+  faceApiReady = true;
+  console.log('face-api.js models loaded');
 }
 
 /* ── Generate 128-D descriptor ───────────────────────────────────────────── */

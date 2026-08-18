@@ -1,8 +1,8 @@
 <?php
 $servername = "localhost";
-$username = "leijigaviola_smart_room_user";
-$password = "Xk&J&8T64z)@R#+q";
-$database = "leijigaviola_smart_room_db";
+$username = "leijigaviola_backsmart_room_user";
+$password = "_7@tT]_3Vfa87(9O";
+$database = "leijigaviola_back_smart_room_db";
 
 date_default_timezone_set('Asia/Manila');
 

@@ -118,70 +118,96 @@ include __DIR__ . '/../authentication.php';
 ?>
 
 <style>
-.sched-card { border-radius: 14px; border: none; transition: box-shadow .2s; }
-.sched-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
-.time-badge { font-size: 1rem; font-weight: 700; color: #0d1b2a; }
-.room-chip  { background: #0d1b2a; color: #fff; border-radius: 8px; padding: 2px 10px; font-size: .8rem; font-weight: 600; }
-.action-area { border-top: 1px solid #eee; padding-top: 1rem; margin-top: 1rem; }
-.status-trail { font-size: .75rem; color: #888; }
-.btn-yes  { background: #198754; color:#fff; border:none; font-weight:700; }
+/* Scoped to this page only — does not affect shared layout or other pages.
+   Simple, flat, academic style: white cards, thin borders, no shadows,
+   no gradients, one accent blue, and color used only where it carries
+   meaning (green/red/yellow/gray for status). */
+.faculty-dashboard-page { color: #1f2937; }
+
+.faculty-dashboard-page .card {
+  box-shadow: none;
+  border: 1px solid #dfe3e8;
+  border-radius: 6px;
+}
+
+.faculty-dashboard-page h5,
+.faculty-dashboard-page h6 { color: #111827; }
+
+.fd-label { font-size: .75rem; color: #6b7280; margin-bottom: .25rem; }
+.fd-value { font-size: 1rem; font-weight: 600; color: #111827; }
+.fd-sub   { font-size: .8rem; color: #6b7280; }
+
+.sched-card { border-radius: 6px; }
+.time-badge { font-size: .95rem; font-weight: 600; color: #111827; }
+.room-chip  {
+  background: #fff; color: var(--brand-blue, #1a6bcc);
+  border: 1px solid var(--brand-blue, #1a6bcc);
+  border-radius: 4px; padding: 2px 10px; font-size: .8rem; font-weight: 600;
+}
+.action-area { border-top: 1px solid #eee; padding-top: .85rem; margin-top: .85rem; }
+.status-trail { font-size: .75rem; color: #6b7280; }
+
+.btn-yes, .btn-no, .btn-checkin, .btn-checkout {
+  border: none; font-weight: 600; border-radius: 5px;
+}
+.btn-yes  { background: #198754; color:#fff; }
 .btn-yes:hover  { background: #146c43; color:#fff; }
-.btn-no   { background: #dc3545; color:#fff; border:none; font-weight:700; }
+.btn-no   { background: #dc3545; color:#fff; }
 .btn-no:hover   { background: #b02a37; color:#fff; }
-.btn-checkin  { background: #0d6efd; color:#fff; border:none; font-weight:700; }
-.btn-checkin:hover { background: #0b5ed7; color:#fff; }
-.btn-checkout { background: #6c757d; color:#fff; border:none; font-weight:700; }
+.btn-checkin  { background: var(--brand-blue, #1a6bcc); color:#fff; }
+.btn-checkin:hover { background: #15579f; color:#fff; }
+.btn-checkout { background: #6c757d; color:#fff; }
 .btn-checkout:hover { background: #565e64; color:#fff; }
 
-.stat-mini { border-radius: 14px; }
-.stat-mini .stat-icon { width: 46px; height: 46px; border-radius: 12px; display:flex; align-items:center; justify-content:center; font-size:1.25rem; }
-.stat-mini .stat-num  { font-size: 1.6rem; font-weight: 800; line-height:1; }
-.stat-mini .stat-lbl  { font-size: .75rem; color:#6c757d; }
-.upcoming-card { border-radius: 14px; background: linear-gradient(135deg,#0d6efd 0%,#0a58ca 100%); color:#fff; }
+.stat-mini .stat-num  { font-size: 1.3rem; font-weight: 700; line-height:1; }
+.stat-mini .stat-lbl  { font-size: .72rem; color:#6b7280; }
+
+.upcoming-card { border-left: 3px solid var(--brand-blue, #1a6bcc); }
 .activity-item { font-size: .8rem; padding: .5rem 0; border-bottom: 1px solid #f0f0f0; }
 .activity-item:last-child { border-bottom: none; }
-.activity-icon { width: 32px; height: 32px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size: .85rem; flex-shrink:0; }
-.summary-bar { height: 10px; border-radius: 6px; overflow:hidden; background:#e9ecef; }
+
+/* Hide the generic role/date line in the shared topbar only while this
+   page is loaded — the faculty schedule below already shows the date
+   in context, so it doesn't need repeating in the header. No other
+   page or file is changed. */
+body:has(.faculty-dashboard-page) .topbar .badge.bg-primary-subtle,
+body:has(.faculty-dashboard-page) .topbar .text-muted.small.d-none.d-md-inline {
+  display: none;
+}
 </style>
 
-<div class="d-flex justify-content-between align-items-start mb-4">
-  <div>
-    <h5 class="fw-bold mb-1">
-      <i class="bi bi-calendar-day text-primary me-2"></i>Today's Classes
-    </h5>
-    <div class="text-muted small">
-      <i class="bi bi-calendar3 me-1"></i><?= date('l, F d, Y') ?> &nbsp;|&nbsp;
-      <i class="bi bi-clock me-1"></i><span id="liveClock"></span>
-    </div>
-  </div>
-  <span class="badge bg-primary fs-6"><?= $today ?></span>
+<div class="faculty-dashboard-page">
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 class="fw-bold mb-0">Today's Classes</h5>
+  <div class="fd-sub"><?= date('l, F d, Y') ?> &middot; <span id="liveClock"></span></div>
 </div>
 
 <div class="row g-3 mb-4">
   <div class="col-lg-4">
     <div class="card h-100">
       <div class="card-body">
-        <div class="text-muted small fw-semibold mb-1"><i class="bi bi-play-circle me-1"></i>Current Subject</div>
-        <div class="fw-bold fs-6"><?= $currentClass ? htmlspecialchars($currentClass['subject']) : 'No current class' ?></div>
-        <div class="text-muted small"><?= $currentClass ? date('h:i A', strtotime($currentClass['time_start'])) . ' - ' . date('h:i A', strtotime($currentClass['time_end'])) : 'Nothing in progress' ?></div>
+        <div class="fd-label">Current Subject</div>
+        <div class="fd-value"><?= $currentClass ? htmlspecialchars($currentClass['subject']) : 'No current class' ?></div>
+        <div class="fd-sub"><?= $currentClass ? date('h:i A', strtotime($currentClass['time_start'])) . ' - ' . date('h:i A', strtotime($currentClass['time_end'])) : 'Nothing in progress' ?></div>
       </div>
     </div>
   </div>
   <div class="col-lg-4">
     <div class="card h-100">
       <div class="card-body">
-        <div class="text-muted small fw-semibold mb-1"><i class="bi bi-door-open me-1"></i>Current Room</div>
-        <div class="fw-bold fs-6"><?= $currentClass ? htmlspecialchars($currentClass['room_code']) : 'None' ?></div>
-        <div class="text-muted small"><?= $currentClass ? htmlspecialchars($currentClass['room_name']) : 'No room currently assigned' ?></div>
+        <div class="fd-label">Current Room</div>
+        <div class="fd-value"><?= $currentClass ? htmlspecialchars($currentClass['room_code']) : 'None' ?></div>
+        <div class="fd-sub"><?= $currentClass ? htmlspecialchars($currentClass['room_name']) : 'No room currently assigned' ?></div>
       </div>
     </div>
   </div>
   <div class="col-lg-4">
     <div class="card h-100">
       <div class="card-body">
-        <div class="text-muted small fw-semibold mb-1"><i class="bi bi-hourglass-split me-1"></i>Confirmation Window</div>
-        <div class="fw-bold fs-6" id="confirmationCountdown">--:--</div>
-        <div class="text-muted small" id="confirmationCountdownLabel">Checking schedule</div>
+        <div class="fd-label">Confirmation Window</div>
+        <div class="fd-value" id="confirmationCountdown">--:--</div>
+        <div class="fd-sub" id="confirmationCountdownLabel">Checking schedule</div>
       </div>
     </div>
   </div>
@@ -190,67 +216,49 @@ include __DIR__ . '/../authentication.php';
 <div class="row g-3 mb-4">
   <div class="col-6 col-md">
     <div class="card stat-mini h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-calendar3"></i></div>
-        <div>
-          <div class="stat-num text-primary"><?= $totalToday ?></div>
-          <div class="stat-lbl">Today's Classes</div>
-        </div>
+      <div class="card-body">
+        <div class="stat-num text-dark"><?= $totalToday ?></div>
+        <div class="stat-lbl">Today's Classes</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md">
     <div class="card stat-mini h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-check-circle"></i></div>
-        <div>
-          <div class="stat-num text-success"><?= $confirmedCount ?></div>
-          <div class="stat-lbl">Confirmed Classes</div>
-        </div>
+      <div class="card-body">
+        <div class="stat-num text-success"><?= $confirmedCount ?></div>
+        <div class="stat-lbl">Confirmed</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md">
     <div class="card stat-mini h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon bg-warning-subtle text-warning"><i class="bi bi-hourglass-split"></i></div>
-        <div>
-          <div class="stat-num text-warning"><?= $pendingCount ?></div>
-          <div class="stat-lbl">Pending Classes</div>
-        </div>
+      <div class="card-body">
+        <div class="stat-num text-warning"><?= $pendingCount ?></div>
+        <div class="stat-lbl">Pending</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md">
     <div class="card stat-mini h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon bg-secondary-subtle text-secondary"><i class="bi bi-flag"></i></div>
-        <div>
-          <div class="stat-num text-secondary"><?= $completedCount ?></div>
-          <div class="stat-lbl">Completed Classes</div>
-        </div>
+      <div class="card-body">
+        <div class="stat-num text-secondary"><?= $completedCount ?></div>
+        <div class="stat-lbl">Completed</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md">
     <div class="card stat-mini h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon bg-dark-subtle text-dark"><i class="bi bi-exclamation-triangle"></i></div>
-        <div>
-          <div class="stat-num text-dark"><?= $missedCount ?></div>
-          <div class="stat-lbl">Missed Confirmations</div>
-        </div>
+      <div class="card-body">
+        <div class="stat-num text-dark"><?= $missedCount ?></div>
+        <div class="stat-lbl">Missed Confirm.</div>
       </div>
     </div>
   </div>
   <div class="col-6 col-md">
     <div class="card stat-mini h-100">
-      <div class="card-body d-flex align-items-center gap-3">
-        <div class="stat-icon bg-danger-subtle text-danger"><i class="bi bi-person-fill-x"></i></div>
-        <div>
-          <div class="stat-num text-danger"><?= $noShowCount ?></div>
-          <div class="stat-lbl">No Shows</div>
-        </div>
+      <div class="card-body">
+        <div class="stat-num text-danger"><?= $noShowCount ?></div>
+        <div class="stat-lbl">No Shows</div>
       </div>
     </div>
   </div>
@@ -258,103 +266,44 @@ include __DIR__ . '/../authentication.php';
 
 <div class="row g-3 mb-4">
 
-  <div class="col-lg-4">
+  <div class="col-lg-6">
     <?php if ($upcoming): ?>
     <div class="card upcoming-card h-100">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-2">
-          <span class="badge bg-light text-primary fw-semibold"><i class="bi bi-arrow-up-right-circle me-1"></i>Up Next</span>
-          <span class="badge bg-white text-dark"><?= htmlspecialchars($upcoming['room_code']) ?></span>
+          <span class="fd-label mb-0">Up Next</span>
+          <span class="badge bg-light text-dark border"><?= htmlspecialchars($upcoming['room_code']) ?></span>
         </div>
-        <div class="fw-bold fs-5 mb-1"><?= htmlspecialchars($upcoming['subject']) ?></div>
+        <div class="fw-bold fs-6 mb-1"><?= htmlspecialchars($upcoming['subject']) ?></div>
         <?php if ($upcoming['section']): ?>
-        <div class="small mb-2 opacity-75"><i class="bi bi-people me-1"></i><?= htmlspecialchars($upcoming['section']) ?></div>
+        <div class="fd-sub mb-2"><?= htmlspecialchars($upcoming['section']) ?></div>
         <?php endif; ?>
-        <div class="fs-6 fw-semibold">
-          <i class="bi bi-clock me-1"></i>
+        <div class="fd-value">
           <?= date('h:i A', strtotime($upcoming['time_start'])) ?> – <?= date('h:i A', strtotime($upcoming['time_end'])) ?>
         </div>
-        <div class="small mt-2 opacity-75">
-          <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($upcoming['room_name']) ?>
-        </div>
+        <div class="fd-sub mt-1"><?= htmlspecialchars($upcoming['room_name']) ?></div>
       </div>
     </div>
     <?php else: ?>
     <div class="card h-100">
-      <div class="card-body d-flex flex-column align-items-center justify-content-center text-center text-muted py-5">
-        <i class="bi bi-cup-hot fs-2 mb-2"></i>
+      <div class="card-body d-flex align-items-center justify-content-center text-center text-muted py-4">
         <div class="small">No more upcoming classes today.</div>
       </div>
     </div>
     <?php endif; ?>
   </div>
 
-  <div class="col-lg-4">
+  <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-body">
-        <div class="fw-semibold mb-3"><i class="bi bi-pie-chart me-2 text-primary"></i>Today's Summary</div>
-        <?php
-          $pctConfirmed = $totalToday > 0 ? round(($confirmedCount / $totalToday) * 100) : 0;
-          $pctCompleted = $totalToday > 0 ? round(($completedCount / $totalToday) * 100) : 0;
-          $pctPending   = $totalToday > 0 ? round(($pendingCount   / $totalToday) * 100) : 0;
-          $pctMissed    = $totalToday > 0 ? round(($missedCount    / $totalToday) * 100) : 0;
-          $pctNoShow    = $totalToday > 0 ? round(($noShowCount    / $totalToday) * 100) : 0;
-        ?>
-        <div class="mb-2">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>Confirmed</span><span class="fw-semibold"><?= $confirmedCount ?>/<?= $totalToday ?></span>
-          </div>
-          <div class="summary-bar"><div class="bg-success h-100" style="width:<?= $pctConfirmed ?>%"></div></div>
-        </div>
-        <div class="mb-2">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>Completed</span><span class="fw-semibold"><?= $completedCount ?>/<?= $totalToday ?></span>
-          </div>
-          <div class="summary-bar"><div class="bg-secondary h-100" style="width:<?= $pctCompleted ?>%"></div></div>
-        </div>
-        <div class="mb-1">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>Pending Response</span><span class="fw-semibold"><?= $pendingCount ?>/<?= $totalToday ?></span>
-          </div>
-          <div class="summary-bar"><div class="bg-warning h-100" style="width:<?= $pctPending ?>%"></div></div>
-        </div>
-        <div class="mb-1">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>Missed Confirmation</span><span class="fw-semibold"><?= $missedCount ?>/<?= $totalToday ?></span>
-          </div>
-          <div class="summary-bar"><div class="bg-dark h-100" style="width:<?= $pctMissed ?>%"></div></div>
-        </div>
-        <div class="mb-1">
-          <div class="d-flex justify-content-between small mb-1">
-            <span>No Show</span><span class="fw-semibold"><?= $noShowCount ?>/<?= $totalToday ?></span>
-          </div>
-          <div class="summary-bar"><div class="bg-danger h-100" style="width:<?= $pctNoShow ?>%"></div></div>
-        </div>
-        <?php if ($totalToday === 0): ?>
-        <div class="text-muted small text-center mt-3">No classes scheduled today.</div>
-        <?php endif; ?>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-lg-4">
-    <div class="card h-100">
-      <div class="card-body">
-        <div class="fw-semibold mb-2"><i class="bi bi-activity me-2 text-primary"></i>Recent Activity</div>
+        <div class="fw-semibold mb-2">Recent Activity</div>
         <?php if (empty($recentActivity)): ?>
-        <div class="text-muted small text-center py-4">
-          <i class="bi bi-inbox fs-4 d-block mb-1"></i>No recent activity yet.
-        </div>
+        <div class="text-muted small text-center py-4">No recent activity yet.</div>
         <?php else: ?>
-        <?php foreach ($recentActivity as $act):
-          [$icon, $color] = activityIcon($act['action_type']);
-        ?>
-        <div class="activity-item d-flex align-items-start gap-2">
-          <div class="activity-icon bg-<?= $color ?>-subtle text-<?= $color ?>"><i class="bi <?= $icon ?>"></i></div>
-          <div class="flex-grow-1">
-            <div class="text-dark"><?= htmlspecialchars($act['description'] ?? ucfirst(str_replace('_',' ',$act['action_type']))) ?></div>
-            <div class="text-muted" style="font-size:.7rem;"><?= date('M d, h:i A', strtotime($act['created_at'])) ?></div>
-          </div>
+        <?php foreach ($recentActivity as $act): ?>
+        <div class="activity-item">
+          <div class="text-dark"><?= htmlspecialchars($act['description'] ?? ucfirst(str_replace('_',' ',$act['action_type']))) ?></div>
+          <div class="text-muted" style="font-size:.7rem;"><?= date('M d, h:i A', strtotime($act['created_at'])) ?></div>
         </div>
         <?php endforeach; ?>
         <?php endif; ?>
@@ -365,11 +314,10 @@ include __DIR__ . '/../authentication.php';
 </div>
 
 <?php if (empty($scheduleRows)): ?>
-<div class="card text-center py-5">
+<div class="card text-center py-4">
   <div class="card-body">
-    <i class="bi bi-calendar-x text-muted" style="font-size:3rem;"></i>
-    <h5 class="mt-3 text-muted">No Classes Today</h5>
-    <p class="text-muted small">You have no scheduled classes for <?= $today ?>.</p>
+    <h6 class="text-muted mb-1">No Classes Today</h6>
+    <p class="text-muted small mb-0">You have no scheduled classes for <?= $today ?>.</p>
   </div>
 </div>
 <?php endif; ?>
@@ -408,65 +356,48 @@ include __DIR__ . '/../authentication.php';
         <div>
           <div class="fw-bold fs-6"><?= htmlspecialchars($row['subject']) ?></div>
           <?php if ($row['section']): ?>
-          <div class="text-muted small"><i class="bi bi-people me-1"></i><?= htmlspecialchars($row['section']) ?></div>
+          <div class="text-muted small"><?= htmlspecialchars($row['section']) ?></div>
           <?php endif; ?>
         </div>
         <?= statusBadge($logStatus) ?>
       </div>
 
-      <div class="d-flex flex-wrap gap-2 mb-3">
-        <span class="room-chip"><i class="bi bi-door-open me-1"></i><?= htmlspecialchars($row['room_code']) ?></span>
-        <span class="badge bg-light text-dark border">
-          <i class="bi bi-geo-alt me-1"></i><?= htmlspecialchars($row['building'] ?? 'N/A') ?>
-        </span>
-        <span class="badge bg-light text-dark border">
-          <i class="bi bi-people me-1"></i><?= $row['capacity'] ?> seats
-        </span>
+      <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <span class="room-chip"><?= htmlspecialchars($row['room_code']) ?></span>
+        <span class="fd-sub"><?= htmlspecialchars($row['building'] ?? 'N/A') ?> &middot; <?= $row['capacity'] ?> seats</span>
       </div>
       <div class="time-badge mb-3">
-        <i class="bi bi-clock text-primary me-1"></i>
         <?= date('h:i A', strtotime($row['time_start'])) ?> &mdash; <?= date('h:i A', strtotime($row['time_end'])) ?>
       </div>
 
       <div class="status-trail mb-1">
         <?php if ($row['confirmed_at']): ?>
-        <i class="bi bi-check2-circle text-<?= $confirm==='yes'?'success':'danger' ?> me-1"></i>
         <?= $confirm==='yes' ? 'Confirmed YES' : 'Declined' ?> at <?= date('h:i A', strtotime($row['confirmed_at'])) ?>
         <?php endif; ?>
         <?php if ($hasCheckIn): ?>
-        <br><i class="bi bi-box-arrow-in-right text-primary me-1"></i>Checked in at <?= date('h:i A', strtotime($row['checkin_at'])) ?>
+        <br>Checked in at <?= date('h:i A', strtotime($row['checkin_at'])) ?>
         <?php endif; ?>
         <?php if ($hasCheckOut): ?>
-        <br><i class="bi bi-box-arrow-right text-secondary me-1"></i>Checked out at <?= date('h:i A', strtotime($row['checkout_at'])) ?>
+        <br>Checked out at <?= date('h:i A', strtotime($row['checkout_at'])) ?>
         <?php endif; ?>
       </div>
 
       <div class="action-area">
 
         <?php if ($hasCheckOut): ?>
-        <div class="alert alert-success py-2 mb-0 text-center small fw-semibold">
-          <i class="bi bi-check-circle-fill me-1"></i>Session Complete
-        </div>
+        <div class="alert alert-success py-2 mb-0 text-center small fw-semibold">Session Complete</div>
 
         <?php elseif ($hasCheckIn): ?>
-        <div class="alert alert-primary py-2 mb-0 text-center small fw-semibold">
-          <i class="bi bi-wifi me-1"></i>Occupied &mdash; Tap your RFID card again to Check Out
-        </div>
+        <div class="alert alert-primary py-2 mb-0 text-center small fw-semibold">Occupied &mdash; Tap your RFID card again to Check Out</div>
 
         <?php elseif ($confirm === 'no'): ?>
-        <div class="alert alert-warning py-2 mb-0 text-center small fw-semibold">
-          <i class="bi bi-x-circle me-1"></i>You declined this class &mdash; RFID attendance is disabled for it today
-        </div>
+        <div class="alert alert-warning py-2 mb-0 text-center small fw-semibold">You declined this class &mdash; RFID attendance is disabled for it today</div>
 
         <?php elseif ($logStatus === 'No Show'): ?>
-        <div class="alert alert-danger py-2 mb-0 text-center small fw-semibold">
-          <i class="bi bi-exclamation-triangle me-1"></i>No Show
-        </div>
+        <div class="alert alert-danger py-2 mb-0 text-center small fw-semibold">No Show</div>
 
         <?php elseif ($logStatus === 'Missed Confirmation'): ?>
-        <div class="alert alert-dark py-2 mb-0 text-center small fw-semibold">
-          <i class="bi bi-clock-history me-1"></i>Attendance window closed &mdash; room released
-        </div>
+        <div class="alert alert-dark py-2 mb-0 text-center small fw-semibold">Attendance window closed &mdash; room released</div>
 
         <?php elseif ($canConfirm): ?>
         <p class="small text-muted mb-2 fw-semibold">Will you conduct this class? <span class="fw-normal">(optional)</span></p>
@@ -476,9 +407,7 @@ include __DIR__ . '/../authentication.php';
             <input type="hidden" name="room_id"     value="<?= $row['room_id'] ?>">
             <input type="hidden" name="confirmation" value="yes">
             <div class="d-grid">
-              <button type="submit" class="btn btn-yes rounded-3 py-2">
-                <i class="bi bi-check-circle me-1"></i>YES
-              </button>
+              <button type="submit" class="btn btn-yes py-2">YES</button>
             </div>
           </form>
           <form method="POST" action="confirm.php" class="flex-fill no-double">
@@ -486,29 +415,20 @@ include __DIR__ . '/../authentication.php';
             <input type="hidden" name="room_id"     value="<?= $row['room_id'] ?>">
             <input type="hidden" name="confirmation" value="no">
             <div class="d-grid">
-              <button type="submit" class="btn btn-no rounded-3 py-2">
-                <i class="bi bi-x-circle me-1"></i>NO
-              </button>
+              <button type="submit" class="btn btn-no py-2">NO</button>
             </div>
           </form>
         </div>
-        <div class="text-center text-muted" style="font-size:.72rem;">
-          <i class="bi bi-wifi me-1"></i>Your RFID card works automatically too &mdash; a response here isn't required.
-        </div>
+        <div class="text-center text-muted" style="font-size:.72rem;">Your RFID card works automatically too &mdash; a response here isn't required.</div>
 
         <?php elseif ($awaitingRfid): ?>
-        <div class="alert alert-secondary py-2 mb-0 text-center small fw-semibold">
-          <i class="bi bi-wifi me-1"></i>UNCONFIRMED &mdash; Tap your RFID card now to Check In
-        </div>
+        <div class="alert alert-secondary py-2 mb-0 text-center small fw-semibold">UNCONFIRMED &mdash; Tap your RFID card now to Check In</div>
 
         <?php elseif ($promptExpired): ?>
-        <div class="alert alert-secondary py-2 mb-0 text-center small fw-semibold">
-          <i class="bi bi-clock-history me-1"></i>Attendance window closed
-        </div>
+        <div class="alert alert-secondary py-2 mb-0 text-center small fw-semibold">Attendance window closed</div>
 
         <?php else: ?>
         <div class="alert alert-light border py-2 mb-0 text-center small fw-semibold text-muted">
-          <i class="bi bi-hourglass-split me-1"></i>
           Confirmation opens at <?= date('h:i A', strtotime($row['confirmation_start'])) ?>
         </div>
         <?php endif; ?>
@@ -517,6 +437,8 @@ include __DIR__ . '/../authentication.php';
   </div>
 </div>
 <?php endforeach; ?>
+</div>
+
 </div>
 
   </div></div>

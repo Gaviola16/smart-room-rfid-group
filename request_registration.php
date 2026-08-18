@@ -200,7 +200,31 @@ body {
       <input type="hidden" name="face_descriptor" id="face_descriptor">
       <input type="hidden" name="face_image" id="face_image">
 
-      <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person me-1"></i>Faculty Information</h6>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-primary">Step 1</span>
+        <h6 class="fw-bold mb-0 text-primary">Face Registration</h6>
+      </div>
+      <p class="text-muted small">Please register your face before completing the form. Look directly at the camera — capture happens automatically once your face is centered and stable.</p>
+      <div class="camera-wrap mb-2" id="cameraWrap">
+        <video id="video" autoplay playsinline webkit-playsinline muted></video>
+        <div class="face-guide" id="faceGuide"></div>
+        <div class="scan-line" id="scanLine"></div>
+        <div class="face-tick d-none" id="faceTick"><i class="bi bi-check-circle-fill text-success" style="font-size:3rem;text-shadow:0 2px 8px rgba(0,0,0,.5)"></i></div>
+      </div>
+      <div class="alert alert-info d-flex align-items-center gap-2 mb-3" id="faceStatus">
+        <div class="spinner-border spinner-border-sm" id="faceSpinner"></div>
+        <span id="faceStatusText">Starting camera...</span>
+      </div>
+      <div class="d-grid mb-4 d-none" id="retryCameraWrap">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="retryCameraBtn">
+          <i class="bi bi-arrow-clockwise me-1"></i>Retry Camera
+        </button>
+      </div>
+
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-primary">Step 2</span>
+        <h6 class="fw-bold mb-0 text-primary">Account Information</h6>
+      </div>
       <div class="row g-3 mb-4">
         <div class="col-md-6"><label class="form-label fw-semibold">Employee ID <span class="text-danger">*</span></label><input type="text" name="employee_id" class="form-control" required value="<?= htmlspecialchars($_POST['employee_id'] ?? '') ?>"></div>
         <div class="col-md-6"><label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label><input type="email" name="email" class="form-control" required value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"></div>
@@ -210,7 +234,11 @@ body {
         <div class="col-md-6"><label class="form-label fw-semibold">Department <span class="text-danger">*</span></label><input type="text" name="department" class="form-control" required value="<?= htmlspecialchars($_POST['department'] ?? '') ?>"></div>
         <div class="col-md-6"><label class="form-label fw-semibold">Contact Number <span class="text-danger">*</span></label><input type="text" name="contact_number" class="form-control" required value="<?= htmlspecialchars($_POST['contact_number'] ?? '') ?>"></div>
       </div>
-      <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-shield-lock me-1"></i>Account Recovery</h6>
+
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-primary">Step 3</span>
+        <h6 class="fw-bold mb-0 text-primary">Other Required Information</h6>
+      </div>
       <div class="row g-3 mb-4">
         <div class="col-md-6">
           <label class="form-label fw-semibold">Security Question <span class="text-danger">*</span></label>
@@ -222,24 +250,6 @@ body {
           </select>
         </div>
         <div class="col-md-6"><label class="form-label fw-semibold">Security Answer <span class="text-danger">*</span></label><input type="text" name="security_answer" class="form-control" required autocomplete="off"></div>
-      </div>
-
-      <h6 class="fw-bold mb-3 text-primary"><i class="bi bi-person-bounding-box me-1"></i>One-Time Face Registration</h6>
-      <p class="text-muted small">Look directly at the camera. The system will automatically capture your face once centered and stable.</p>
-      <div class="camera-wrap mb-2" id="cameraWrap">
-        <video id="video" autoplay playsinline webkit-playsinline muted></video>
-        <div class="face-guide" id="faceGuide"></div>
-        <div class="scan-line" id="scanLine"></div>
-        <div class="face-tick d-none" id="faceTick"><i class="bi bi-check-circle-fill text-success" style="font-size:3rem;text-shadow:0 2px 8px rgba(0,0,0,.5)"></i></div>
-      </div>
-      <div class="alert alert-info d-flex align-items-center gap-2 mb-3" id="faceStatus">
-        <div class="spinner-border spinner-border-sm" id="faceSpinner"></div>
-        <span id="faceStatusText">Starting camera...</span>
-      </div>
-      <div class="d-grid mb-3 d-none" id="retryCameraWrap">
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="retryCameraBtn">
-          <i class="bi bi-arrow-clockwise me-1"></i>Retry Camera
-        </button>
       </div>
 
       <div class="d-grid">
@@ -270,8 +280,19 @@ const retryWrap = document.getElementById('retryCameraWrap');
 const retryBtn = document.getElementById('retryCameraBtn');
 const submitBtn = document.getElementById('submitBtn');
 
-let stableFrames = 0, faceApiReady = false, captured = false, descriptorAttempts = 0, cameraHandle = null;
-const STABLE_NEEDED = 8;
+let faceApiReady = false, captured = false, descriptorAttempts = 0, cameraHandle = null;
+let detectionBusy = false; // guards against overlapping faceDetection.send() calls (see startCamera())
+// Time-based hold (matches faculty/face_verification.php): capture once the
+// face has been continuously well-positioned for HOLD_DURATION_MS, instead
+// of counting a fixed number of onResults callbacks. A frame count assumes
+// a steady ~8 callbacks/sec, but a single MediaPipe send()->onResults()
+// round trip can take anywhere from ~50ms to 500ms+ on slower devices, so
+// counting callbacks either finishes far slower than real time (the "stuck
+// on Hold still" symptom) or — when combined with unthrottled overlapping
+// sends — advances inconsistently. Time elapsed is accurate regardless of
+// how many callbacks actually arrive.
+const HOLD_DURATION_MS = 1700;
+let holdStartTime = null;
 const MIN_BRIGHTNESS = 45; // 0-255 luma; below this we ask for more light instead of failing silently
 
 function setFaceStatus(msg, type='info', spin=true) {
@@ -280,7 +301,14 @@ function setFaceStatus(msg, type='info', spin=true) {
   spinner.style.display = spin ? '' : 'none';
 }
 
-const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+// IMPORTANT: this MODEL_URL must host weights built for the exact face-api.js
+// build loaded above (dist/face-api.min.js@0.22.2 from justadudewhohacks).
+// It previously pointed at '@vladmandic/face-api/model' — a different,
+// actively-maintained fork with its own newer TensorFlow.js internals and
+// incompatible weight tensors, which fails to load against the 0.22.2
+// script (throws inside face-api.js's own weight loader). This URL serves
+// the original weights from the SAME repo as the loaded script.
+const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights';
 async function loadModels() {
   await Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -321,9 +349,14 @@ async function captureDescriptor() {
 
   if (desc && desc.length === 128) {
     document.getElementById('face_descriptor').value = JSON.stringify(Array.from(desc));
-    setFaceStatus('🟢 Face registered once. You may submit the request.', 'success', false);
+    setFaceStatus('✓ Face registered successfully. You may continue completing the form.', 'success', false);
+    // Registration is one-time and already captured — stop detection and
+    // release the camera immediately instead of continuing to analyze
+    // frames while the person fills out the rest of the form.
+    if (cameraHandle) { cameraHandle.stop(); cameraHandle = null; }
   } else {
     captured = false;
+    holdStartTime = null;
     faceTick.classList.add('d-none');
     scanLine.style.display = '';
     faceGuide.classList.remove('stable');
@@ -342,19 +375,22 @@ faceDetection.setOptions({ model:'short', minDetectionConfidence:0.68 });
 faceDetection.onResults(results => {
   if (captured || !faceApiReady) return;
   const faces = results.detections || [];
-  if (faces.length === 0) { stableFrames = 0; setFaceStatus('🟡 No face detected. Please position your face inside the guide.','info'); return; }
-  if (faces.length > 1) { stableFrames = 0; setFaceStatus('🔴 Multiple faces detected. Please ensure only one person is visible.','danger'); return; }
+  if (faces.length === 0) { holdStartTime = null; setFaceStatus('🟡 No face detected. Please position your face inside the guide.','info'); return; }
+  if (faces.length > 1) { holdStartTime = null; setFaceStatus('🔴 Multiple faces detected. Please ensure only one person is visible.','danger'); return; }
   const box = getBox(faces[0]);
-  if (box && box.width > 0 && box.width < 0.15) { stableFrames = 0; setFaceStatus('🟡 Move closer to the camera.','warning'); return; }
+  if (box && box.width > 0 && box.width < 0.15) { holdStartTime = null; setFaceStatus('🟡 Move closer to the camera.','warning'); return; }
   const ok = box && box.xCenter > 0.35 && box.xCenter < 0.65 && box.yCenter > 0.25 && box.yCenter < 0.75 && box.width > 0.15;
-  if (!ok) { stableFrames = 0; setFaceStatus('🟡 Center your face inside the guide.','warning'); return; }
+  if (!ok) { holdStartTime = null; setFaceStatus('🟡 Center your face inside the guide.','warning'); return; }
 
   const brightness = FaceCamera.estimateBrightness(video);
-  if (brightness < MIN_BRIGHTNESS) { stableFrames = 0; setFaceStatus('🟡 Lighting is too dark. Please improve the lighting.','warning'); return; }
+  if (brightness < MIN_BRIGHTNESS) { holdStartTime = null; setFaceStatus('🟡 Lighting is too dark. Please improve the lighting.','warning'); return; }
 
-  stableFrames++;
+  // Face is present, alone, centered, correctly sized, and well lit —
+  // capture once it has stayed that way for HOLD_DURATION_MS.
+  const now = performance.now();
+  if (holdStartTime === null) holdStartTime = now;
   setFaceStatus('🟢 Face detected. Hold still...','success');
-  if (stableFrames >= STABLE_NEEDED) captureDescriptor();
+  if (now - holdStartTime >= HOLD_DURATION_MS) captureDescriptor();
 });
 
 async function startCamera() {
@@ -363,7 +399,20 @@ async function startCamera() {
   try {
     cameraHandle = await FaceCamera.start(video, {
       fps: 8,
-      onFrame: () => faceDetection.send({ image: video }),
+      // Guard against overlapping detection passes: a single MediaPipe
+      // send() -> onResults() round trip can take longer than the ~125ms
+      // frame interval on slower devices. Without this guard, the frame
+      // loop keeps firing and queues up more send() calls than the model
+      // can process, which is what caused the sluggish/laggy behavior
+      // during face registration. Waiting for the previous call to finish
+      // keeps at most one detection pass in flight at a time.
+      onFrame: () => {
+        if (captured || detectionBusy) return;
+        detectionBusy = true;
+        Promise.resolve(faceDetection.send({ image: video }))
+          .catch(e => console.warn('face detection send error:', e))
+          .finally(() => { detectionBusy = false; });
+      },
       onRetryNotice: (msg) => setFaceStatus(msg, 'warning', true),
     });
     if (faceApiReady) {
@@ -389,7 +438,7 @@ async function startCamera() {
 retryBtn?.addEventListener('click', () => {
   if (retryBtn.dataset.reload === '1') { window.location.reload(); return; }
   if (cameraHandle) { cameraHandle.stop(); cameraHandle = null; }
-  captured = false; stableFrames = 0;
+  captured = false; holdStartTime = null; detectionBusy = false;
   startCamera();
 });
 

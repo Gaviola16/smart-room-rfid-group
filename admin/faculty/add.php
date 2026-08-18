@@ -136,7 +136,17 @@ include __DIR__ . '/../../authentication.php';
                 <input type="password" name="password" id="pw" class="form-control" placeholder="Min. 8 chars, upper, lower, number, special" required>
                 <button class="btn btn-outline-secondary" type="button" onclick="togglePw()"><i class="bi bi-eye" id="pwIcon"></i></button>
               </div>
-              <div class="form-text">✓ 8+ characters &nbsp; ✓ Uppercase &nbsp; ✓ Lowercase &nbsp; ✓ Number &nbsp; ✓ Special character</div>
+              <div class="progress mt-2" style="height:4px;">
+                <div class="progress-bar" id="pwStrengthBar" role="progressbar" style="width:0%"></div>
+              </div>
+              <div class="small mt-1" id="pwStrengthLabel">&nbsp;</div>
+              <ul class="list-unstyled small mt-1 mb-0" id="pwReqList">
+                <li id="req-len"><i class="bi bi-x-circle-fill text-danger me-1"></i>8+ characters</li>
+                <li id="req-upper"><i class="bi bi-x-circle-fill text-danger me-1"></i>Uppercase</li>
+                <li id="req-lower"><i class="bi bi-x-circle-fill text-danger me-1"></i>Lowercase</li>
+                <li id="req-num"><i class="bi bi-x-circle-fill text-danger me-1"></i>Number</li>
+                <li id="req-special"><i class="bi bi-x-circle-fill text-danger me-1"></i>Special character</li>
+              </ul>
             </div>
             <div class="col-md-6">
               <label class="form-label fw-semibold">Department</label>
@@ -172,4 +182,52 @@ document.getElementById('facultyForm').addEventListener('submit', function () {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
 });
+
+/* Live password requirement indicator (UI only — server still enforces the real rules) */
+function initPwChecklist(inputId) {
+  const input = document.getElementById(inputId);
+  const bar   = document.getElementById('pwStrengthBar');
+  const label = document.getElementById('pwStrengthLabel');
+  if (!input || !bar || !label) return;
+  const reqs = {
+    len: document.getElementById('req-len'),
+    upper: document.getElementById('req-upper'),
+    lower: document.getElementById('req-lower'),
+    num: document.getElementById('req-num'),
+    special: document.getElementById('req-special')
+  };
+  function setReq(el, met, text) {
+    el.innerHTML = (met
+      ? '<i class="bi bi-check-circle-fill text-success me-1"></i>'
+      : '<i class="bi bi-x-circle-fill text-danger me-1"></i>') + text;
+  }
+  input.addEventListener('input', function () {
+    const v = this.value;
+    const checks = {
+      len: v.length >= 8,
+      upper: /[A-Z]/.test(v),
+      lower: /[a-z]/.test(v),
+      num: /[0-9]/.test(v),
+      special: /[^A-Za-z0-9]/.test(v)
+    };
+    setReq(reqs.len,     checks.len,     '8+ characters');
+    setReq(reqs.upper,   checks.upper,   'Uppercase');
+    setReq(reqs.lower,   checks.lower,   'Lowercase');
+    setReq(reqs.num,     checks.num,     'Number');
+    setReq(reqs.special, checks.special, 'Special character');
+
+    const score = Object.values(checks).filter(Boolean).length;
+    let pct = 0, color = '#adb5bd', text = '';
+    if (v.length > 0) {
+      if (score <= 2)      { pct = 33;  color = '#dc3545'; text = 'Weak'; }
+      else if (score <= 4) { pct = 66;  color = '#ffc107'; text = 'Medium'; }
+      else                 { pct = 100; color = '#198754'; text = 'Strong'; }
+    }
+    bar.style.width = pct + '%';
+    bar.style.background = color;
+    label.textContent = text || '\u00A0';
+    label.style.color = color;
+  });
+}
+initPwChecklist('pw');
 </script></body></html>

@@ -11,15 +11,23 @@
  *   - admin/reports/faculty_attendance.php  (view=faculty_attendance)
  *   - admin/reports/room_occupancy.php      (view=room_occupancy)
  *   - admin/reports/room_utilization.php    (view=room_utilization)
+ *   - admin/responses.php                   (view=history, "Room Activity" filter group)
  *
  * None of the database tables, calculations, or query logic from those pages
  * were removed — every report tab below runs the SAME queries the original
  * standalone file ran (see comments per section). This file only changes
- * WHERE that logic lives: one Admin menu item ("Activity & Reports") with an
- * in-page tab switcher, instead of eight separate sidebar links.
+ * WHERE that logic lives, and (per the professor's simplification request)
+ * removes the page-level tab switcher so there is exactly ONE visible
+ * Activity & Reports screen: the Unified History, with a Filter button and a
+ * separate Generate Report button. The specialized report code
+ * (daily/weekly/monthly/faculty attendance/room occupancy/room utilization)
+ * is kept, unchanged, and still reachable at its original ?view=... URL —
+ * it's just no longer linked from the UI, since Unified History + Generate
+ * Report already covers what an admin needs day to day.
  *
  * The original files still exist and still work — they now redirect here
- * (see e.g. admin/activity_logs.php) so old bookmarks/links never 404.
+ * (see e.g. admin/activity_logs.php, admin/responses.php) so old
+ * bookmarks/notification links never 404.
  */
 
 require_once __DIR__ . '/../db.php';
@@ -448,41 +456,17 @@ include __DIR__ . '/../authentication.php';
 </div>
 
 <?php
-// Every one of these views/labels/icons is unchanged from before — this
-// only changes the container they render in: two clickable items (History,
-// Reports) instead of seven, per the professor's "wag na padamihin" note.
-// All of the report calculations below still run exactly as they did.
-$reportTabs = [
-  'daily'               => ['Daily Report',        'bi-calendar-day'],
-  'weekly'              => ['Weekly Report',        'bi-calendar-week'],
-  'monthly'             => ['Monthly Report',       'bi-calendar-month'],
-  'faculty_attendance'  => ['Faculty Attendance',   'bi-person-check'],
-  'room_occupancy'      => ['Room Occupancy',       'bi-door-open'],
-  'room_utilization'    => ['Room Utilization',     'bi-building-fill-check'],
-];
-$activeReportTab = $reportTabs[$view] ?? null;
+// Per the professor's feedback, the page-level tab switcher (History +
+// a "Reports" dropdown of 6 separate report pages) has been removed so
+// there is exactly ONE visible Activity & Reports interface: the Unified
+// History below, with a Filter button and a separate Generate Report
+// button. Nothing was deleted — the daily/weekly/monthly/faculty
+// attendance/room occupancy/room utilization report code further below is
+// untouched and still reachable at its original ?view=... URL for anyone
+// with an old bookmark/link ($allowedViews above still accepts them) — it's
+// just no longer surfaced as a clickable tab, since the sidebar and every
+// in-app link now only ever points to ?view=history.
 ?>
-<ul class="nav nav-pills ar-tabs mb-3 no-print flex-wrap gap-1">
-  <li class="nav-item">
-    <a class="nav-link <?= $view === 'history' ? 'active' : '' ?>" href="?view=history">
-      <i class="bi bi-journal-text me-1"></i>History
-    </a>
-  </li>
-  <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle <?= $activeReportTab ? 'active' : '' ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-      <i class="bi bi-bar-chart-line me-1"></i><?= $activeReportTab ? $activeReportTab[0] : 'Reports' ?>
-    </a>
-    <ul class="dropdown-menu">
-      <?php foreach ($reportTabs as $key => [$label, $icon]): ?>
-      <li>
-        <a class="dropdown-item <?= $view === $key ? 'active' : '' ?>" href="?view=<?= $key ?>">
-          <i class="bi <?= $icon ?> me-2"></i><?= $label ?>
-        </a>
-      </li>
-      <?php endforeach; ?>
-    </ul>
-  </li>
-</ul>
 
 <?php if ($view === 'history'): ?>
 
@@ -615,7 +599,7 @@ $activeReportTab = $reportTabs[$view] ?? null;
         <table class="table table-hover align-middle mb-0">
           <thead class="table-dark">
             <tr>
-              <th>Date / Time</th><th>User</th><th>Room</th><th>Activity</th><th>Description</th>
+              <th>Date / Time</th><th>User</th><th>Activity</th><th>Room</th><th>Details</th><th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -630,9 +614,10 @@ $activeReportTab = $reportTabs[$view] ?? null;
                 <span class="text-muted small">System / Unknown</span>
               <?php endif; ?>
             </td>
-            <td class="small"><?= $row['room_code'] ? '<span class="badge bg-dark">'.htmlspecialchars($row['room_code']).'</span>' : '<span class="text-muted">—</span>' ?></td>
             <td><?= $row['source']==='room' ? roomActionBadge($row['action_key']) : actionBadge($row['action_key']) ?></td>
+            <td class="small"><?= $row['room_code'] ? '<span class="badge bg-dark">'.htmlspecialchars($row['room_code']).'</span>' : '<span class="text-muted">—</span>' ?></td>
             <td class="small"><?= htmlspecialchars($row['description'] ?? '') ?></td>
+            <td class="small"><?= $row['status'] ? htmlspecialchars($row['status']) : '<span class="text-muted">—</span>' ?></td>
           </tr>
           <?php endforeach; ?>
           </tbody>
